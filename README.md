@@ -1,0 +1,30 @@
+name: SCALE push notifications
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - run: node send.js
+        env:
+          SA_KEY: ${{ secrets.SA_KEY }}
+      - name: keepalive
+        run: |
+          date -u > .keepalive
+          git config user.name "scale-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add .keepalive
+          git commit -m "keepalive" || exit 0
+          git push
