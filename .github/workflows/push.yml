@@ -2,30 +2,32 @@ name: SCALE push notifications
 
 on:
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 permissions:
   contents: write
 
+concurrency:
+  group: scale-push
+  cancel-in-progress: false
+
 jobs:
   send:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: npm install
+      - name: cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: nm-${{ hashFiles('package.json') }}
+      - run: npm install --omit=dev --no-audit --no-fund
       - run: node send.js
         env:
           SA_KEY: ${{ secrets.SA_KEY }}
           APP_URL: ${{ vars.APP_URL }}
-      - name: keepalive
-        run: |
-          date -u > .keepalive
-          git config user.name "scale-bot"
-          git config user.email "bot@users.noreply.github.com"
-          git add .keepalive
-          git commit -m "keepalive" || exit 0
-          git push
